@@ -86,6 +86,11 @@
             }
           ],
           "description": "Rules for markdown paste."
+        },
+        "MarkdownPaste.renderFilePathFormat": {
+          "type": "string",
+          "default": null,
+          "description": "Paste image format string. Can include ${width} , ${height} , ${imageFilePath}"
         }
       }
     },

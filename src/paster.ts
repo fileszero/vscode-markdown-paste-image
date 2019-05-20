@@ -1,12 +1,12 @@
 'use strict';
 import * as path from 'path';
 import * as clipboard from 'clipboardy'
-import {spawn, ChildProcess} from 'child_process';
+import { spawn, ChildProcess } from 'child_process';
 import * as moment from 'moment';
 import * as vscode from 'vscode';
-import {toMarkdown} from './toMarkdown';
-import {prepareDirForFile, fetchAndSaveFile} from './utils';
-import {existsSync} from 'fs';
+import { toMarkdown } from './toMarkdown';
+import { prepareDirForFile, fetchAndSaveFile } from './utils';
+import { existsSync } from 'fs';
 
 enum ClipboardType {
     Unkown = -1, Html = 0, Text, Image
@@ -14,28 +14,28 @@ enum ClipboardType {
 
 /**
  * Run command and get stdout
- * @param shell 
- * @param options 
+ * @param shell
+ * @param options
  */
 function runCommand(shell, options: string[]): Promise<string> {
-  return new Promise((resolve, reject) => {
-    let stdout = "";
-    let stderr = "";
-    let process: ChildProcess = spawn(shell, options);
-    process.stdout.on("data", contents => {
-      stdout += contents;
+    return new Promise((resolve, reject) => {
+        let stdout = "";
+        let stderr = "";
+        let process: ChildProcess = spawn(shell, options);
+        process.stdout.on("data", contents => {
+            stdout += contents;
+        });
+        process.stderr.on("data", contents => {
+            stderr += contents;
+        });
+        process.on("error", reject).on("close", function (code) {
+            if (code === 0) {
+                resolve(stdout);
+            } else {
+                reject(new Error(stderr));
+            }
+        });
     });
-    process.stderr.on("data", contents => {
-      stderr += contents;
-    });
-    process.on("error", reject).on("close", function(code) {
-      if (code === 0) {
-        resolve(stdout);
-      } else {
-        reject(new Error(stderr));
-      }
-    });
-  });
 }
 
 class Paster {
@@ -46,30 +46,30 @@ class Paster {
     public static pasteText() {
         var ret = this.getClipboardContentType((ctx_type) => {
             console.log("Clipboard Type:", ctx_type)
-            switch(ctx_type) {
-            case ClipboardType.Html:
-                this.pasteTextHtml((html)=>{
-                    console.log(html);
-                    var markdown = toMarkdown(html);
-                    Paster.writeToEditor(markdown);
-                });
-            break;
-            case ClipboardType.Text:
-                this.pasteTextPlain((text) => {
-                    if (text) {
-                        let newContent = Paster.parse(text);
-                        Paster.writeToEditor(newContent);
-                    }
-                })
-            break;
-            case ClipboardType.Image:
-                Paster.pasteImage();
-            break;
+            switch (ctx_type) {
+                case ClipboardType.Html:
+                    this.pasteTextHtml((html) => {
+                        console.log(html);
+                        var markdown = toMarkdown(html);
+                        Paster.writeToEditor(markdown);
+                    });
+                    break;
+                case ClipboardType.Text:
+                    this.pasteTextPlain((text) => {
+                        if (text) {
+                            let newContent = Paster.parse(text);
+                            Paster.writeToEditor(newContent);
+                        }
+                    })
+                    break;
+                case ClipboardType.Image:
+                    Paster.pasteImage();
+                    break;
             }
         });
 
         // If cannot get content type then try to read clipboard once
-        if(false == ret) {
+        if (false == ret) {
             var content = clipboard.readSync();
             if (content) {
                 let newContent = Paster.parse(content);
@@ -86,20 +86,20 @@ class Paster {
     public static pasteDownload() {
         var ret = this.getClipboardContentType((ctx_type) => {
             console.log("Clipboard Type:", ctx_type)
-            switch(ctx_type) {
-            case ClipboardType.Html:
-            case ClipboardType.Text:
-                this.pasteTextPlain((text) => {
-                    if (text) {
-                        if(/^(http[s]:)+\/\/(.*)/i.test(text)) {
-                            Paster.pasteImageURL(text);
+            switch (ctx_type) {
+                case ClipboardType.Html:
+                case ClipboardType.Text:
+                    this.pasteTextPlain((text) => {
+                        if (text) {
+                            if (/^(http[s]:)+\/\/(.*)/i.test(text)) {
+                                Paster.pasteImageURL(text);
+                            }
                         }
-                    }
-                })
-            break;
+                    })
+                    break;
             }
         });
-    }    
+    }
     /**
      * Ruby tag
      */
@@ -114,7 +114,7 @@ class Paster {
         return /<[a-z][\s\S]*>/i.test(content);
     }
 
-    private static writeToEditor(content): Thenable < boolean > {
+    private static writeToEditor(content): Thenable<boolean> {
         let startLine = vscode.window.activeTextEditor.selection.start.line;
         var selection = vscode.window.activeTextEditor.selection
         let position = new vscode.Position(startLine, selection.start.character);
@@ -123,16 +123,15 @@ class Paster {
         });
     }
 
-    private static replacePredefinedVars(str) {
-        let replaceMap = {
-            "${workspaceRoot}": vscode.workspace.rootPath,
-        };
+    private static replacePredefinedVars(str: string, vals: {} = {}) {
+        let replaceMap = vals;
+        replaceMap["${workspaceRoot}"] = vscode.workspace.rootPath;
 
         let editor = vscode.window.activeTextEditor;
         let fileUri = editor && editor.document.uri;
         let filePath = fileUri && fileUri.fsPath;
 
-        if(filePath) {
+        if (filePath) {
             replaceMap["${fileExtname}"] = path.extname(filePath);
             replaceMap["${fileBasenameNoExtension}"] = path.basename(filePath, replaceMap["${fileExtname}"]);
             replaceMap["${fileBasename}"] = path.basename(filePath);
@@ -146,7 +145,7 @@ class Paster {
         // User may be input a path with backward slashes (\), so need to replace all '\' to '/'.
         return str.replace(/\\/g, '/');
     }
-    
+
 
     protected static saveImage(inputVal) {
         if (!inputVal) return;
@@ -169,7 +168,7 @@ class Paster {
         let width;
         let height;
         let enableImgTag = vscode.workspace.getConfiguration('MarkdownPaste').enableImgTag;
-        if(enableImgTag) {
+        if (enableImgTag) {
             // parse `<filepath>[,width,height]`. for example. /abc/abc.png,200,100
             let ar = inputVal.split(',');
             inputVal = ar[0];
@@ -178,7 +177,7 @@ class Paster {
         }
 
         let imgPath = inputVal.replace(/\\/g, "/");
-        if(!prepareDirForFile(imgPath)) {
+        if (!prepareDirForFile(imgPath)) {
             vscode.window.showErrorMessage('Make folder failed:' + imgPath);
             return;
         }
@@ -219,15 +218,15 @@ class Paster {
         }
 
         try {
-            // if copied content is exist file path that under folder of workspace root path 
+            // if copied content is exist file path that under folder of workspace root path
             // then add a relative link into markdown.
-            if(existsSync(content)) {
+            if (existsSync(content)) {
                 let editor = vscode.window.activeTextEditor;
                 let fileUri = editor.document.uri;
                 let current_file_path = fileUri.fsPath;
                 let workspace_dir = vscode.workspace.rootPath;
 
-                if(content.startsWith(workspace_dir)) {
+                if (content.startsWith(workspace_dir)) {
                     let relative_path = path.relative(path.dirname(current_file_path), content).replace(/\\/g, '/');
                     return `![](${relative_path})`;
                 }
@@ -244,7 +243,7 @@ class Paster {
         return content;
     }
 
-    private static pasteTextPlain(callback:(data)=> void) {
+    private static pasteTextPlain(callback: (data) => void) {
         var script = {
             'win32': "win32_get_clipboard_text_plain.ps1",
             'linux': "linux_get_clipboard_text_plain.sh"
@@ -255,7 +254,7 @@ class Paster {
         return ret;
     }
 
-    private static pasteTextHtml(callback:(data) => void) {
+    private static pasteTextHtml(callback: (data) => void) {
         var script = {
             'win32': "win32_get_clipboard_text_html.ps1",
             'linux': "linux_get_clipboard_text_html.sh"
@@ -267,7 +266,7 @@ class Paster {
     }
 
     /**
-     * 
+     *
      * @param image_url url of image
      */
     private static pasteImageURL(image_url) {
@@ -310,7 +309,7 @@ class Paster {
             Paster.downloadFile(image_url, imagePath);
         } else {
             let ext = path.extname(imagePath);
-            
+
             let options: vscode.InputBoxOptions = {
                 prompt: "You can change the filename, exist file will be overwrite!.",
                 value: imagePath,
@@ -344,7 +343,7 @@ class Paster {
         let width;
         let height;
         let enableImgTag = vscode.workspace.getConfiguration('MarkdownPaste').enableImgTag;
-        if(enableImgTag) {
+        if (enableImgTag) {
             // parse `<filepath>[,width,height]`. for example. /abc/abc.png,200,100
             let ar = inputVal.split(',');
             inputVal = ar[0];
@@ -353,34 +352,34 @@ class Paster {
         }
 
         let imgPath = inputVal.replace(/\\/g, "/");
-        if(!prepareDirForFile(imgPath)) {
+        if (!prepareDirForFile(imgPath)) {
             vscode.window.showErrorMessage('Make folder failed:' + imgPath);
             return;
         }
 
         // save image and insert to current edit file
         fetchAndSaveFile(image_url, imgPath)
-        .then((imagePath : string) => {
-            if (!imagePath) return;
-            if (imagePath === 'no image') {
-                vscode.window.showInformationMessage('There is not a image in clipboard.');
-                return;
-            }
-
-            imagePath = this.renderFilePath(editor.document.languageId, filePath, imagePath, width, height);
-
-            editor.edit(edit => {
-                let current = editor.selection;
-
-                if (current.isEmpty) {
-                    edit.insert(current.start, imagePath);
-                } else {
-                    edit.replace(current, imagePath);
+            .then((imagePath: string) => {
+                if (!imagePath) return;
+                if (imagePath === 'no image') {
+                    vscode.window.showInformationMessage('There is not a image in clipboard.');
+                    return;
                 }
+
+                imagePath = this.renderFilePath(editor.document.languageId, filePath, imagePath, width, height);
+
+                editor.edit(edit => {
+                    let current = editor.selection;
+
+                    if (current.isEmpty) {
+                        edit.insert(current.start, imagePath);
+                    } else {
+                        edit.replace(current, imagePath);
+                    }
+                });
+            }).catch(err => {
+                vscode.window.showErrorMessage('Download failed:' + err);
             });
-        }).catch(err => {
-            vscode.window.showErrorMessage('Download failed:' + err);
-        });
     }
 
     private static pasteImage() {
@@ -461,32 +460,32 @@ class Paster {
 
     private static getClipboardType(type_array) {
         let content_type = ClipboardType.Unkown;
-        if(!type_array) {
+        if (!type_array) {
             return content_type
         }
 
         let platform = process.platform;
         console.log('platform', platform);
-        if(platform=="linux") {
-            for(var i = 0; i < type_array.length; i++) {
+        if (platform == "linux") {
+            for (var i = 0; i < type_array.length; i++) {
                 var type = type_array[i];
-                if(type == "image/png") {
+                if (type == "image/png") {
                     content_type = ClipboardType.Image;
                     break;
-                } else if(type == "text/html") {
+                } else if (type == "text/html") {
                     content_type = ClipboardType.Html;
                     break;
                 } else {
                     content_type = ClipboardType.Text;
                 }
             }
-         } else if(platform == "win32") {
-            for(var i = 0; i < type_array.length; i++) {
+        } else if (platform == "win32") {
+            for (var i = 0; i < type_array.length; i++) {
                 var type = type_array[i];
-                if(type == "PNG" || type=="Bitmap") {
+                if (type == "PNG" || type == "Bitmap") {
                     content_type = ClipboardType.Image;
                     break;
-                } else if(type == "UnicodeText" || type == "Text" || type=="HTML Format") {
+                } else if (type == "UnicodeText" || type == "Text" || type == "HTML Format") {
                     content_type = ClipboardType.Text;
                     break;
                 }
@@ -502,7 +501,7 @@ class Paster {
         };
 
         let ret = this.runScript(script, [], (data) => {
-            console.log("getClipboardContentType",data);
+            console.log("getClipboardContentType", data);
             if (data == "no xclip") {
                 vscode.window.showInformationMessage('You need to install xclip command first.');
                 return;
@@ -514,14 +513,14 @@ class Paster {
     }
 
     /**
-     * 
-     * @param script 
-     * @param parameters 
-     * @param callback 
+     *
+     * @param script
+     * @param parameters
+     * @param callback
      */
-    private static runScript(script, parameters = [], callback = (data) => {} ) {
+    private static runScript(script, parameters = [], callback = (data) => { }) {
         let platform = process.platform;
-        if(typeof script[platform] === "undefined") {
+        if (typeof script[platform] === "undefined") {
             console.log(`Cannot found script for ${platform}`);
             return false;
         }
@@ -551,7 +550,7 @@ class Paster {
         }
         const runer = runCommand(shell, command);
         runer.then(stdout => {
-            if(callback) {
+            if (callback) {
                 callback(stdout.toString().trim());
             }
             // return stdout                 // return the command value
@@ -569,12 +568,12 @@ class Paster {
         if (!imagePath) return;
 
         const script = {
-            'win32':"win32_save_clipboard_png.ps1",
+            'win32': "win32_save_clipboard_png.ps1",
             "darwin": "mac.applescript",
             "linux": "linux_save_clipboard_png.sh"
         };
 
-        let ret = this.runScript(script,[imagePath], (data) => {
+        let ret = this.runScript(script, [imagePath], (data) => {
             cb(data);
         });
 
@@ -588,9 +587,17 @@ class Paster {
     public static renderFilePath(languageId: string, docPath: string, imageFilePath: string, width, height): string {
         // relative will be add backslash characters so need to replace '\' to '/' here.
         imageFilePath = path.relative(path.dirname(docPath), imageFilePath).replace(/\\/g, '/');
-
+        const renderFilePathFormat = vscode.workspace.getConfiguration('MarkdownPaste').renderFilePathFormat;
+        if (renderFilePathFormat) {
+            const replaceMap = {
+                "${width}": width,
+                "${height}": height,
+                "${imageFilePath}": imageFilePath
+            };
+            return Paster.replacePredefinedVars(renderFilePathFormat, replaceMap);
+        }
         if (languageId === 'markdown') {
-            if(typeof width !== "undefined" ) {
+            if (typeof width !== "undefined") {
                 height = height || '';
                 return `<img src='${imageFilePath}' width='${width}' height='${height}'/>`;
             }
@@ -601,4 +608,4 @@ class Paster {
     }
 }
 
-export {Paster}
+export { Paster }
